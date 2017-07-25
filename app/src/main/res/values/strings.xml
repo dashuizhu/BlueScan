@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">BlueScan</string>
+    <string name="label_input_filter_name">输入过滤的蓝牙名</string>
+    <string name="scan">开始搜索</string>
+    <string name="export">导出</string>
+    <string name="clean">清除</string>
+    <string name="bluetooth_not_support">不支持蓝牙</string>
+    <string name="label_compary_info">深圳市智宝源电子科技有限公司\n蓝牙方案提供商   电话:0755-29496493</string>
+</resources>
