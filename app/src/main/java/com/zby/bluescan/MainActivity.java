@@ -61,7 +61,7 @@ public class MainActivity extends Activity {
   private BluetoothAdapter btAdapter;
 
   private Toast mToast;
-  private long scan_time = 10 * 1000;
+  private long scan_time = 5 * 1000;
   private Map<String, Long> filter = new HashMap<String, Long>();
   private String filterName;
   private boolean isScanWork;
@@ -324,7 +324,7 @@ public class MainActivity extends Activity {
             .subscribe(new Action1<BlueBean>() {
               @Override public void call(BlueBean blueBean) {
                 mBeanList.add(0, blueBean);
-                mAdapter.notifyDataSetChanged();
+                mAdapter.notifyItemInserted(0);
                 mTvScanSize.setText(String.valueOf(mBeanList.size()));
               }
             });
@@ -339,7 +339,24 @@ public class MainActivity extends Activity {
       //BluetoothLeScanner
       while (isScan) {
         Log.v(TAG, "循环搜索");
+
         if (btAdapter != null && btAdapter.isEnabled()) {
+          Observable.just("").observeOn(AndroidSchedulers.mainThread()).subscribe(new Subscriber<String>() {
+            @Override public void onCompleted() {
+
+            }
+
+            @Override public void onError(Throwable throwable) {
+              throwable.printStackTrace();
+            }
+
+            @Override public void onNext(String s) {
+              mBeanList.clear();
+              filter.clear();
+              mAdapter.notifyDataSetChanged();
+              mTvScanSize.setText("0");
+            }
+          });
           btAdapter.startLeScan(scanCallBack);
           //BluetoothLeScanner scanner = btAdapter.getBluetoothLeScanner();
           //scanner.startScan(leCallback);
