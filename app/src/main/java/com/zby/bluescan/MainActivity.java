@@ -76,6 +76,7 @@ public class MainActivity extends Activity {
     @Override public void onLeScan(BluetoothDevice arg0, int arg1, byte[] arg2) {
       // TODO Auto-generated method stub
       Log.d(TAG, "发现蓝牙设备: " + arg0.getName() + arg0.getAddress());
+
       foundDevice(arg0);
     }
   };
