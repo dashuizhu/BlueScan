@@ -56,6 +56,7 @@ public class MainActivity extends Activity {
   Thread scanThread;
   @BindView(R.id.tv_scan_size) TextView mTvScanSize;
   @BindView(R.id.tv_all_size) TextView mTvAllSize;
+  @BindView(R.id.tv_scan_cycle) EditText mTvScanCycle;
   private DeviceScanAdapter mAdapter;
   private List<BlueBean> mBeanList;
   private BluetoothAdapter btAdapter;
@@ -66,6 +67,8 @@ public class MainActivity extends Activity {
   private String filterName;
   private boolean isScanWork;
   private RealmResults mRealmResults;
+  private int cycle;
+  private int cyclelabel=0;
 
   /**
    * //     * 蓝牙设备搜索 监听
@@ -236,14 +239,19 @@ public class MainActivity extends Activity {
     if (onOff) {
       mBtnScan.setText("停止搜索");
       mBtnScan.setTextColor(getResources().getColor(R.color.green));
-
+      //设置输入框不可编辑
+      mTvScanCycle.setFocusable(false);
+      //设置输入框失去焦点
+      mTvScanCycle.setFocusableInTouchMode(false);
       isScanWork = true;
-      scanThread = new Thread(new ScanRunnable());
+      scanThread = new Thread(new ScancycleRunnable());
       scanThread.start();
     } else {
       mBtnScan.setText("开始搜索");
       mBtnScan.setTextColor(getResources().getColor(R.color.text_normal));
-
+      mTvScanCycle.setFocusable(true);
+      mTvScanCycle.setFocusableInTouchMode(true);
+      mTvScanCycle.requestFocus();
       isScanWork = false;
       if (scanThread != null) {
         scanThread.interrupt();
@@ -316,19 +324,21 @@ public class MainActivity extends Activity {
         return;
       }
     }
-    bin = new BlueBean();
-    bin.setMac(device.getAddress());
-    bin.setName(device.getName());
-    BlueDao.saveOrUpdate(bin);
-    Observable.just(bin)
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe(new Action1<BlueBean>() {
-              @Override public void call(BlueBean blueBean) {
-                mBeanList.add(0, blueBean);
-                mAdapter.notifyItemInserted(0);
-                mTvScanSize.setText(String.valueOf(mBeanList.size()));
-              }
-            });
+    cycle = scancycleble();
+    cyclelabel++;
+    if (cyclelabel<=cycle) {
+      bin = new BlueBean();
+      bin.setMac(device.getAddress());
+      bin.setName(device.getName());
+      BlueDao.saveOrUpdate(bin);
+      Observable.just(bin).observeOn(AndroidSchedulers.mainThread()).subscribe(new Action1<BlueBean>() {
+        @Override public void call(BlueBean blueBean) {
+          mBeanList.add(0, blueBean);
+          mAdapter.notifyItemInserted(0);
+          mTvScanSize.setText(String.valueOf(mBeanList.size()));
+        }
+      });
+    }
   }
 
   class ScanRunnable implements Runnable {
@@ -342,22 +352,7 @@ public class MainActivity extends Activity {
         Log.v(TAG, "循环搜索");
 
         if (btAdapter != null && btAdapter.isEnabled()) {
-          Observable.just("").observeOn(AndroidSchedulers.mainThread()).subscribe(new Subscriber<String>() {
-            @Override public void onCompleted() {
-
-            }
-
-            @Override public void onError(Throwable throwable) {
-              throwable.printStackTrace();
-            }
-
-            @Override public void onNext(String s) {
-              mBeanList.clear();
-              filter.clear();
-              mAdapter.notifyDataSetChanged();
-              mTvScanSize.setText("0");
-            }
-          });
+          scancclear();
           btAdapter.startLeScan(scanCallBack);
           //BluetoothLeScanner scanner = btAdapter.getBluetoothLeScanner();
           //scanner.startScan(leCallback);
@@ -382,6 +377,93 @@ public class MainActivity extends Activity {
                 @Override public void call(String s) {
                   mBtnScan.setTextColor(getResources().getColor(R.color.text_normal));
                   mBtnScan.setText("开始搜索");
+                }
+              });
+      Log.v(TAG, "搜索线程停止");
+    }
+  }
+
+  public void scancclear() {
+    Observable.just("")
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe(new Subscriber<String>() {
+              @Override public void onCompleted() {
+
+              }
+
+              @Override public void onError(Throwable throwable) {
+                throwable.printStackTrace();
+              }
+
+              @Override public void onNext(String s) {
+                mBeanList.clear();
+                filter.clear();
+                mAdapter.notifyDataSetChanged();
+                mTvScanSize.setText("0");
+              }
+            });
+  }
+
+  public int scancycleble() {
+    String i = mTvScanCycle.getText().toString();
+    if (i == null) {
+      return 16;
+    }
+    try {
+      return Integer.valueOf(i);
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    return 16;
+  }
+
+  class ScancycleRunnable implements Runnable {
+    int cycle;
+
+    @Override public void run() {
+      boolean isScan = true;
+      boolean in = true;
+      // TODO Auto-generated method stub
+      cycle = scancycleble();
+      Log.v(TAG, "开始搜索线程");
+      //BluetoothLeScanner
+      Log.v(TAG, "循环搜索");
+      while (isScan) {
+        int i = Integer.valueOf(mTvScanSize.getText().toString());
+        if (i < cycle) {
+          if (btAdapter != null && btAdapter.isEnabled() && in) {
+            in = false;
+            btAdapter.startLeScan(scanCallBack);
+          }
+        } else if (i >= cycle) {
+          btAdapter.stopLeScan(scanCallBack);
+          scancclear();
+          cyclelabel=0;
+        }
+        try {
+          Thread.sleep(3000);
+        } catch (InterruptedException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+          isScan = false;
+          break;
+        } finally {
+          if (btAdapter != null) {
+            in = true;
+            btAdapter.stopLeScan(scanCallBack);
+          }
+        }
+      }
+      isScanWork = false;
+      Observable.just("")
+              .observeOn(AndroidSchedulers.mainThread())
+              .subscribe(new Action1<String>() {
+                @Override public void call(String s) {
+                  mBtnScan.setTextColor(getResources().getColor(R.color.text_normal));
+                  mBtnScan.setText("开始搜索");
+                  mTvScanCycle.setFocusable(true);
+                  mTvScanCycle.setFocusableInTouchMode(true);
+                  mTvScanCycle.requestFocus();
                 }
               });
       Log.v(TAG, "搜索线程停止");
