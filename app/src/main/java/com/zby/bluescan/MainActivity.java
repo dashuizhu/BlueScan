@@ -1,5 +1,6 @@
 package com.zby.bluescan;
 
+import android.Manifest;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -18,11 +19,10 @@ import android.widget.Toast;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
-import com.crashlytics.android.Crashlytics;
+import com.tbruyelle.rxpermissions.RxPermissions;
 import com.zby.bluescan.database.BlueBean;
 import com.zby.bluescan.database.BlueDao;
 import com.zby.bluescan.database.BuddyRealm;
-import io.fabric.sdk.android.Fabric;
 import io.realm.Realm;
 import io.realm.RealmChangeListener;
 import io.realm.RealmResults;
@@ -86,12 +86,28 @@ public class MainActivity extends Activity {
 
   @Override protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    Fabric.with(this, new Crashlytics());
+    //Fabric.with(this, new Crashlytics());
     setContentView(R.layout.activity_main);
     ButterKnife.bind(this);
     Realm.init(getApplicationContext());
     BuddyRealm.setDefaultRealmForUser("blueScan");
     initViews();
+
+    new RxPermissions(this).request(
+            Manifest.permission.BLUETOOTH,
+            Manifest.permission.BLUETOOTH_ADMIN,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.ACCESS_FINE_LOCATION)
+            .subscribe(new Action1<Boolean>() {
+              @Override
+              public void call(Boolean aBoolean) {
+                if (aBoolean) {
+
+                } else {
+                  showToast(R.string.toast_none_permission);
+                }
+              }
+            });
   }
 
   private void initViews() {
@@ -320,7 +336,7 @@ public class MainActivity extends Activity {
       if (device.getName() != null && !device.getName()
               .replace(" ", "")
               .toLowerCase()
-              .contains(filterName.toLowerCase())) {
+              .startsWith(filterName.toLowerCase())) {
         return;
       }
     }
@@ -383,6 +399,9 @@ public class MainActivity extends Activity {
     }
   }
 
+  /**
+   * 清空扫描中状态
+   */
   public void scancclear() {
     Observable.just("")
             .observeOn(AndroidSchedulers.mainThread())
@@ -404,6 +423,10 @@ public class MainActivity extends Activity {
             });
   }
 
+  /**
+   * 获得一个周期扫描个数
+   * @return
+   */
   public int scancycleble() {
     String i = mTvScanCycle.getText().toString();
     if (i == null) {
@@ -435,7 +458,7 @@ public class MainActivity extends Activity {
             in = false;
             btAdapter.startLeScan(scanCallBack);
           }
-        } else if (i >= cycle) {
+        } else  {
           btAdapter.stopLeScan(scanCallBack);
           scancclear();
           cyclelabel=0;

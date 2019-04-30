@@ -6,4 +6,5 @@
     <string name="clean">清除</string>
     <string name="bluetooth_not_support">不支持蓝牙</string>
     <string name="label_compary_info">深圳市智宝源电子科技有限公司\n蓝牙方案提供商   电话:0755-29496493</string>
+    <string name="toast_none_permission">请打开蓝牙、定位权限</string>
 </resources>
